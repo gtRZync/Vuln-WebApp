@@ -1,0 +1,4 @@
+# Secrets locaux (mots de passe MySQL)
+.env
+# CV envoyés par les utilisateurs
+uploads/cv/*
