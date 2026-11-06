@@ -1,0 +1,18 @@
+<?php
+require_once __DIR__.'/../includes/layout.php';$u=require_login('recruiter');$id=(int)($_GET['id']??0);$o=['title'=>'','type'=>'stage','city'=>'','description'=>'','requirements'=>'','starts_on'=>'','ends_on'=>'','status'=>'open'];$error='';
+if($id){$q=db()->prepare('SELECT * FROM offers WHERE id=? AND recruiter_id=?');$q->execute([$id,$u['id']]);$existing=$q->fetch();if(!$existing){http_response_code(404);exit('Offre introuvable');}$o=$existing;}
+if($_SERVER['REQUEST_METHOD']==='POST'){
+ verify_csrf();foreach($o as $key=>$old)if(in_array($key,['title','type','city','description','requirements','starts_on','ends_on','status'],true))$o[$key]=trim((string)($_POST[$key]??''));
+ if(!$o['title']||!$o['city']||!$o['description']||mb_strlen($o['title'])>200||mb_strlen($o['city'])>120||mb_strlen($o['description'])>10000||mb_strlen($o['requirements'])>5000||!in_array($o['type'],['stage','alternance'],true)||!in_array($o['status'],['open','closed'],true))$error='Vérifiez les champs.';
+ else {
+  foreach(['starts_on','ends_on'] as $field) if($o[$field]!=='' && (!preg_match('/^\d{4}-\d{2}-\d{2}$/',$o[$field])||!checkdate((int)substr($o[$field],5,2),(int)substr($o[$field],8,2),(int)substr($o[$field],0,4))))$error='Date invalide.';
+  if(!$error && $o['starts_on']!=='' && $o['ends_on']!=='' && $o['ends_on']<$o['starts_on'])$error='La date de fin précède le début.';
+ }
+ if(!$error){$args=[$o['title'],$o['type'],$o['city'],$o['description'],$o['requirements'],$o['starts_on']?:null,$o['ends_on']?:null,$o['status']];
+  if($id){$q=db()->prepare('UPDATE offers SET title=?,type=?,city=?,description=?,requirements=?,starts_on=?,ends_on=?,status=? WHERE id=? AND recruiter_id=?');$q->execute([...$args,$id,$u['id']]);log_action($u,'update_offer','offer',$id);}
+  else {$q=db()->prepare('INSERT INTO offers(title,type,city,description,requirements,starts_on,ends_on,status,recruiter_id) VALUES(?,?,?,?,?,?,?,?,?)');$q->execute([...$args,$u['id']]);$id=(int)db()->lastInsertId();log_action($u,'create_offer','offer',$id);}
+  flash('Offre enregistrée.');redirect('recruiter/offers.php');
+ }
+}
+page_header($id?'Modifier une offre':'Publier une offre');if($error)echo '<div class="error">'.h($error).'</div>';
+?><form class="panel" method="post"><?=csrf_field()?><label>Titre du poste</label><input required maxlength="200" name="title" value="<?=h($o['title'])?>"><label>Type</label><select name="type"><option value="stage" <?=$o['type']==='stage'?'selected':''?>>Stage</option><option value="alternance" <?=$o['type']==='alternance'?'selected':''?>>Alternance</option></select><label>Ville</label><input required maxlength="120" name="city" value="<?=h($o['city'])?>"><label>Description du poste</label><textarea required name="description"><?=h($o['description'])?></textarea><label>Compétences attendues</label><textarea name="requirements"><?=h($o['requirements'])?></textarea><label>Date de début (facultatif)</label><input type="date" name="starts_on" value="<?=h($o['starts_on'])?>"><label>Date de fin (facultatif)</label><input type="date" name="ends_on" value="<?=h($o['ends_on'])?>"><label>Statut</label><select name="status"><option value="open" <?=$o['status']==='open'?'selected':''?>>Ouverte</option><option value="closed" <?=$o['status']==='closed'?'selected':''?>>Fermée</option></select><div class="actions"><button>Enregistrer l’offre</button><a href="<?=h(url('recruiter/offers.php'))?>">Annuler</a></div></form><?php page_footer();?>

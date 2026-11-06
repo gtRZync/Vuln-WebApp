@@ -1,0 +1,4 @@
+<?php
+require_once __DIR__.'/../includes/layout.php';$u=require_login('admin');
+$q=db()->query('SELECT l.* FROM activity_logs l ORDER BY l.created_at DESC LIMIT 500');$rows=$q->fetchAll();page_header('Journal des activités');
+?><p>Les 500 événements les plus récents (inscriptions, connexions, candidatures, décisions, suppressions...).</p><div class="table-wrap"><table><thead><tr><th>Date</th><th>Auteur</th><th>Action</th><th>Type</th><th>ID</th><th>Informations</th></tr></thead><tbody><?php foreach($rows as $r):?><tr><td><?=h($r['created_at'])?></td><td><?=h($r['actor_email'])?></td><td><?=h($r['action'])?></td><td><?=h($r['target_type'])?></td><td><?=h((string)$r['target_id'])?></td><td><?=h($r['details'])?></td></tr><?php endforeach;?></tbody></table></div><?php page_footer();?>
