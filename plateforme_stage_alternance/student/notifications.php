@@ -1,0 +1,5 @@
+<?php
+require_once __DIR__.'/../includes/layout.php';$u=require_login('student');
+if($_SERVER['REQUEST_METHOD']==='POST'){verify_csrf();$id=(int)($_POST['id']??0);$q=db()->prepare('UPDATE notifications SET is_read=1 WHERE id=? AND user_id=?');$q->execute([$id,$u['id']]);redirect('student/notifications.php');}
+$q=db()->prepare('SELECT * FROM notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 100');$q->execute([$u['id']]);$rows=$q->fetchAll();page_header('Mes notifications');
+foreach($rows as $r):?><div class="card"><span class="pill"><?=$r['is_read']?'Lue':'Nouvelle'?></span><p><?=h($r['message'])?></p><small><?=h($r['created_at'])?></small><div class="actions"><?php if($r['link']):?><a href="<?=h(url($r['link']))?>">Consulter</a><?php endif;?><?php if(!$r['is_read']):?><form method="post"><?=csrf_field()?><input type="hidden" name="id" value="<?=h((string)$r['id'])?>"><button class="btn-secondary">Marquer comme lue</button></form><?php endif;?></div></div><?php endforeach;?><?php if(!$rows):?><p>Aucune notification.</p><?php endif;page_footer();?>
